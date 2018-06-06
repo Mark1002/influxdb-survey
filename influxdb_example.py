@@ -1,32 +1,46 @@
 import logging
-import pandas as pd
-from influxdb import DataFrameClient
+from influxdb import InfluxDBClient
 
-def main(host='localhost', port=8086):
+def main():
     logging.basicConfig(level=logging.INFO)
-    """Instantiate the connection to the InfluxDB client."""
-    user = 'root'
-    password = 'root'
-    dbname = 'demo'
-    protocol = 'json'
+    json_body = [
+        {
+            "measurement": "electric_power",
+            "tags": {
+                "device_id": "BB12IIMSG-1059010201",
+                "location": "Taipei"
+            },
+            "time": "2017-11-10T23:00:00Z",
+            "fields": {
+                "W": 50.64
+            }
+        },
+        {
+            "measurement": "electric_power",
+            "tags": {
+                "device_id": "RR72WWBBG-40190123456",
+                "location": "U.S.A"
+            },
+            "time": "2017-11-11T03:00:00Z",
+            "fields": {
+                "W": 60.88
+            }
+        }
+    ]
 
-    client = DataFrameClient(host, port, user, password, dbname)
+    client = InfluxDBClient('localhost', 8086, 'root', 'root', 'example')
+    client.create_database('example')
+    client.write_points(json_body)
 
-    logging.info("Create pandas DataFrame")
-    df = pd.DataFrame(data=list(range(30)), index=pd.date_range(start='2014-11-16', periods=30, freq='H'), columns=['0'])
-    logging.info(df)
-    logging.info("Create database: " + dbname)
-    client.create_database(dbname)
+    result = client.query("select W from electric_power where device_id='RR72WWBBG-40190123456';")
+    for point in result.get_points():
+        logging.info(point)
+    
+    result = client.query("select W, device_id from electric_power where location='Taipei';")
+    for point in result.get_points():
+        logging.info(point)
 
-    logging.info("Write DataFrame")
-    client.write_points(df, 'demo', protocol=protocol)
-
-    logging.info("Read DataFrame")
-    df = client.query("select * from demo")['demo']
-    logging.info(df)
-
-    logging.info("Delete database: " + dbname)
-    client.drop_database(dbname)
+    client.drop_database('example')
 
 if __name__ == '__main__':
-    main(host='192.168.99.100')
+    main()
