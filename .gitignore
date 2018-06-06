@@ -105,3 +105,4 @@ venv.bak/
 influxdb
 
 # End of https://www.gitignore.io/api/python
+.vscode/
